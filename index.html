@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Spin the Wheel - Date Ideas</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Use Google Fonts for a modern look */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: url('back.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #ffffff;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Overlay to soften the background image */
+        body::before {
+            content: "";
+            height: 100vh;
+            padding: 0rem !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            background: rgba(0, 0, 0, 0.5);
+            /* Adjust the opacity as needed */
+
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            color: #fff;
+            padding-top: 20px;
+        }
+
+        /* Wheel container styling */
+        #wheelContainer {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 20px auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* Ticker pointer (shows the winning segment) */
+        #ticker {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%) rotate(180deg);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 20px solid #d6336c;
+            z-index: 2;
+        }
+
+        /* Label on the ticker with a loving touch */
+        #tickerLabel {
+            position: absolute;
+            top: -35px;
+            left: -14px;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 16px;
+            transform: rotate(-180deg);
+            text-shadow: 1px 1px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        canvas {
+            border-radius: 50%;
+        }
+
+        /* Spin button styling */
+        #spinBtn {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            background: #d6336c;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s;
+        }
+
+        #spinBtn:hover {
+            background: #b52a5b;
+        }
+
+        /* Result and AI image container styling */
+        #result,
+        #aiImageContainer,
+        #comment {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #d6336c;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        #aiImage {
+            max-width: 90%;
+            border-radius: 10px;
+        }
+
+        /* Styling for the funny comment when an activity is removed */
+        #comment {
+            font-size: 1rem;
+            font-style: italic;
+            color: #fff;
+            opacity: 0;
+        }
+    </style>
+    <!-- Preconnect for Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+    <h1>Spin for Your Perfect Date!</h1>
+    <div id="wheelContainer">
+        <div id="ticker">
+        </div>
+        <canvas id="wheel" width="280" height="280"></canvas>
+    </div>
+    <button id="spinBtn">Spin the Wheel!</button>
+    <div id="result" style="display: none;">
+        <p id="activityText"></p>
+        <button id="chooseBtn" class="btn">Choose this!</button>
+        <button id="removeBtn" class="btn">Remove this</button>
+    </div>
+    <div id="aiImageContainer" style="display: none;">
+        <p>LET'SSSS GOOOOO I LOVEEE YOUUUU SOOOO MUCHHHHH:</p>
+    </div>
+    <div id="comment"></div>
+
+    <script>
+        // Romantic–funny comments that change each time an activity is removed
+        const funnyComments = [
+            "I think that's cheating Shamshon!",
+            "Controlling as always JK!",
+            "WOW the amount of democracy you actually reminded me of someone!",
+        ];
+
+
+        // Activities with names and background image URLs
+        let activities = [
+            { name: "Shooting Range", imgUrl: "shootingrange.jpg" },
+            { name: "Bowling", imgUrl: "bowling.jpg" },
+            { name: "Driving Simulator", imgUrl: "audi.jpg" },
+            { name: "Karting", imgUrl: "karting.jpg" }
+        ];
+
+        let currentActivity = null;
+        let currentRotation = 0;
+
+        const wheelCanvas = document.getElementById("wheel");
+        const ctx = wheelCanvas.getContext("2d");
+        const spinBtn = document.getElementById("spinBtn");
+        const resultDiv = document.getElementById("result");
+        const activityText = document.getElementById("activityText");
+        const chooseBtn = document.getElementById("chooseBtn");
+        const removeBtn = document.getElementById("removeBtn");
+        const aiImageContainer = document.getElementById("aiImageContainer");
+        const aiImage = document.getElementById("aiImage");
+        const commentDiv = document.getElementById("comment");
+
+        const centerX = wheelCanvas.width / 2;
+        const centerY = wheelCanvas.height / 2;
+        const radius = wheelCanvas.width / 2;
+
+        // Preload images for each activity
+        function preloadImages() {
+            return Promise.all(activities.map(activity => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = activity.imgUrl;
+                    img.onload = () => {
+                        activity.img = img;
+                        resolve();
+                    };
+                    img.onerror = reject;
+                });
+            }));
+        }
+
+        // Function when "Choose this!" is clicked
+        chooseBtn.addEventListener("click", () => {
+            if (currentActivity) {
+               
+                aiImageContainer.style.display = "block";
+            } else {
+            }
+        });
+
+
+        // Draw the wheel with image backgrounds (blurred) and activity text
+        function drawWheel() {
+            const numSegments = activities.length;
+            const anglePerSegment = (2 * Math.PI) / numSegments;
+            ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+
+            activities.forEach((activity, index) => {
+                const startAngle = index * anglePerSegment;
+                const endAngle = startAngle + anglePerSegment;
+
+                // Draw segment
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.clip();
+
+                // Apply blur filter before drawing the image
+                ctx.filter = "blur(1px)";
+                if (activity.img) {
+                    ctx.drawImage(activity.img, 0, 0, wheelCanvas.width, wheelCanvas.height);
+                } else {
+                    ctx.fillStyle = "#ddd";
+                    ctx.fillRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+                }
+                ctx.filter = "none";
+
+                // Dark overlay for better text contrast
+                ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+                ctx.fillRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+                ctx.restore();
+
+                // Draw segment outline (stroke)
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.lineWidth = 3; // Thickness of the outline
+                ctx.strokeStyle = "#ffffff"; // White outline for visibility
+                ctx.stroke();
+                ctx.restore();
+
+                // Draw the activity name along the segment’s arc
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + anglePerSegment / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 14px Roboto";
+                ctx.fillText(activity.name, radius - 10, 10);
+                ctx.restore();
+            });
+        }
+
+        // Preload the images, then draw the wheel
+        preloadImages().then(drawWheel).catch(err => {
+            console.error("Error loading images", err);
+            drawWheel(); // fallback drawing
+        });
+
+        // Spin the wheel
+        spinBtn.addEventListener("click", () => {
+            if (activities.length === 0) {
+                alert("No more activities to choose from!");
+                return;
+            }
+
+            // Hide previous results
+            resultDiv.style.display = "none";
+            aiImageContainer.style.display = "none";
+            commentDiv.style.opacity = 0;
+
+            // Fully random spins (5 to 15 full rotations) + random stopping angle
+            const randomSpins = Math.floor(Math.random() * 3) + 3; // 5 to 15 spins
+            const randomExtraAngle = Math.floor(Math.random() * 360); // Random stop position
+
+            // Calculate the final rotation angle
+            const finalRotation = (randomSpins * 360) + randomExtraAngle;
+            currentRotation += finalRotation;
+
+            // Apply smooth rotation animation
+            wheelCanvas.style.transition = "transform 5s cubic-bezier(0.33, 1, 0.68, 1)";
+            wheelCanvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            // Determine the selected segment after the spin
+            setTimeout(() => {
+                let actualDeg = currentRotation % 360; // Normalize angle to 0-360
+                const segmentAngle = 360 / activities.length; // Each segment's angle size
+
+                // Adjust for the fact that the pointer is at 90° (top)
+                let adjustedDeg = (360 - (actualDeg + 90)) % 360;
+                if (adjustedDeg < 0) adjustedDeg += 360; // Ensure positive value
+
+                // Find the segment index under the pointer
+                const index = Math.floor(adjustedDeg / segmentAngle) % activities.length;
+
+                // Update selected activity
+                currentActivity = activities[index];
+                activityText.textContent = `You landed on: ${currentActivity.name}`;
+                resultDiv.style.display = "block";
+            }, 5000);
+        });
+        // Show a funny, romantic comment briefly when an activity is removed
+        let commentIndex = 0;
+
+        function showFunnyComment() {
+            commentDiv.textContent = funnyComments[commentIndex];
+            commentDiv.style.transition = "opacity 0.5s";
+            commentDiv.style.opacity = 1;
+            setTimeout(() => {
+                commentDiv.style.transition = "opacity 4s";
+                commentDiv.style.opacity = 0;
+            }, 8000);
+            commentIndex = (commentIndex + 1) % funnyComments.length;
+        }
+
+        // When the user removes an activity, update the wheel and show a comment
+        removeBtn.addEventListener("click", () => {
+            showFunnyComment();
+            activities = activities.filter(act => act.name !== currentActivity.name);
+            if (activities.length === 0) {
+                alert("All activities have been removed!");
+            }
+            drawWheel();
+            resultDiv.style.display = "none";
+        });
+    </script>
+</body>
+
+</html>
